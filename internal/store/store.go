@@ -7,10 +7,10 @@ import (
 
 type Storage struct {
 	Todos interface {
-		Create(context.Context) error
+		Create(context.Context, *Todo) error
 	}
 	Users interface {
-		Create(context.Context) error
+		Create(context.Context, *User) error
 	}
 }
 
