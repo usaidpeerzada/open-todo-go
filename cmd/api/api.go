@@ -8,15 +8,25 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
 type application struct {
 	config config
 	store  store.Storage
+	logger *zap.SugaredLogger
 }
 
 type config struct {
 	addr string
+	db   dbConfig
+}
+
+type dbConfig struct {
+	addr         string
+	maxOpenConns int
+	maxIdleConns int
+	maxIdleTime  string
 }
 
 func (app *application) mount() http.Handler {
@@ -34,7 +44,16 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/get-todos", app.healthCheckHandler)
+		r.Get("/health", app.healthCheckHandler)
+		r.Route("/todos", func(r chi.Router) {
+			r.Get("/", app.GetAllTodos)
+			r.Get("/{todoID}", app.GetTodoById)
+			r.Post("/create", app.CreateTodo)
+			r.Put("/update/{todoID}", app.UpdateTodo)
+		})
+		// r.Put("/todos/{id}", todoHandler.UpdateTodo)
+		// r.Delete("/todos/{id}", todoHandler.DeleteTodo)
+		// r.Get("/todos/tag/{tag}", todoHandler.GetTodosByTag)
 	})
 	return r
 	// mux := http.NewServeMux()
