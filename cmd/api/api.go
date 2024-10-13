@@ -48,12 +48,11 @@ func (app *application) mount() http.Handler {
 		r.Route("/todos", func(r chi.Router) {
 			r.Get("/", app.GetAllTodos)
 			r.Get("/{todoID}", app.GetTodoById)
+			// r.Get("/todos/tag/{tag}", todoHandler.GetTodosByTag)
 			r.Post("/create", app.CreateTodo)
 			r.Put("/update/{todoID}", app.UpdateTodo)
+			r.Delete("/delete/{todoID}", app.DeleteTodo)
 		})
-		// r.Put("/todos/{id}", todoHandler.UpdateTodo)
-		// r.Delete("/todos/{id}", todoHandler.DeleteTodo)
-		// r.Get("/todos/tag/{tag}", todoHandler.GetTodosByTag)
 	})
 	return r
 	// mux := http.NewServeMux()

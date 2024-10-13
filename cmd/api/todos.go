@@ -112,6 +112,22 @@ func (app *application) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	app.jsonResponse(w, http.StatusOK, nil)
 }
 
+func (app *application) DeleteTodo(w http.ResponseWriter, r *http.Request) {
+	idParam, err := strconv.ParseInt(chi.URLParam(r, "todoID"), 10, 64)
+	if err != nil {
+		app.badRequestResponse(w, r, fmt.Errorf("invalid todo ID: %w", err))
+		return
+	}
+
+	error := app.store.Todos.DeleteTodo(r.Context(), idParam)
+
+	if error != nil {
+		app.internalServerError(w, r, fmt.Errorf("failed to delete todo: %w", err))
+		return
+	}
+	app.jsonResponse(w, http.StatusOK, nil)
+}
+
 // Helper function to build the updates map from the payload
 func buildUpdatesMap(payload UpdatedTodoPayload) map[string]interface{} {
 	updates := make(map[string]interface{})
