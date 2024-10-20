@@ -1,8 +1,10 @@
 package main
 
 import (
+	"expvar"
 	"log"
 	"net/http"
+	"open-todo-go/internal/auth"
 	"open-todo-go/internal/store"
 	"time"
 
@@ -12,14 +14,32 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	authenticator auth.Authenticator
 }
 
 type config struct {
 	addr string
 	db   dbConfig
+	auth authConfig
+}
+
+type authConfig struct {
+	basic basicConfig
+	token tokenConfig
+}
+
+type tokenConfig struct {
+	secret string
+	exp    time.Duration
+	iss    string
+}
+
+type basicConfig struct {
+	user string
+	pass string
 }
 
 type dbConfig struct {
@@ -32,11 +52,18 @@ type dbConfig struct {
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
-	// A good base middleware stack
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	// r.Use(cors.Handler(cors.Options{
+	// 	AllowedOrigins:   []string{env.GetString("CORS_ALLOWED_ORIGIN", "http://localhost:5174")},
+	// 	AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	// 	AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+	// 	ExposedHeaders:   []string{"Link"},
+	// 	AllowCredentials: false,
+	// 	MaxAge:           300, // Maximum value not ignored by any of major browsers
+	// }))
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
@@ -45,6 +72,7 @@ func (app *application) mount() http.Handler {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", app.healthCheckHandler)
+		r.With(app.BasicAuthMiddleware()).Get("/debug/vars", expvar.Handler().ServeHTTP)
 		r.Route("/todos", func(r chi.Router) {
 			r.Get("/", app.GetAllTodos)
 			r.Get("/{todoID}", app.GetTodoById)
@@ -52,6 +80,10 @@ func (app *application) mount() http.Handler {
 			r.Post("/create", app.CreateTodo)
 			r.Put("/update/{todoID}", app.UpdateTodo)
 			r.Delete("/delete/{todoID}", app.DeleteTodo)
+		})
+		r.Route("/user", func(r chi.Router) {
+			r.Post("/create", app.RegisterUserHandler)
+			r.Post("/login", app.LoginHandler)
 		})
 	})
 	return r
