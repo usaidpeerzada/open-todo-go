@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"open-todo-go/internal/store"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -100,11 +101,13 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	var userID int64
 	// Verify password using the hash stored in user.Password.hash
 	if !app.authenticator.VerifyPassword(payload.Password, string(user.Password.Hash)) {
 		app.unauthorizedErrorResponse(w, r, fmt.Errorf("invalid email or password"))
 		return
+	} else {
+		userID = user.ID
 	}
 
 	// Create JWT claims
@@ -125,7 +128,7 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the token in response
-	if err := app.jsonResponse(w, http.StatusOK, map[string]string{"token": token}); err != nil {
+	if err := app.jsonResponse(w, http.StatusOK, map[string]string{"token": token, "userID": strconv.FormatInt(userID, 10)}); err != nil {
 		app.internalServerError(w, r, err)
 	}
 }

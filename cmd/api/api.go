@@ -74,6 +74,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/health", app.healthCheckHandler)
 		r.With(app.BasicAuthMiddleware()).Get("/debug/vars", expvar.Handler().ServeHTTP)
 		r.Route("/todos", func(r chi.Router) {
+			r.Use(app.AuthTokenMiddleware)
 			r.Get("/", app.GetAllTodos)
 			r.Get("/{todoID}", app.GetTodoById)
 			// r.Get("/todos/tag/{tag}", todoHandler.GetTodosByTag)

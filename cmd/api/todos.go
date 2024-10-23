@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"open-todo-go/internal/store"
@@ -38,8 +37,7 @@ func (app *application) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		app.badRequestResponse(w, r, err)
 	}
 
-	userID := getUserIDFromContext(r.Context())
-
+	userID := getUserIdFromContext(r)
 	todo := &store.Todo{
 		UserID:      userID,
 		Title:       payload.Title,
@@ -52,12 +50,10 @@ func (app *application) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		app.badRequestResponse(w, r, fmt.Errorf("failed to create todo: %w", err))
 		return
 	}
-
-	return
 }
 
 func (app *application) GetAllTodos(w http.ResponseWriter, r *http.Request) {
-	userID := getUserIDFromContext(r.Context())
+	userID := getUserIdFromContext(r)
 	todos, err := app.store.Todos.GetAllTodos(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "Failed to fetch todos", http.StatusInternalServerError)
@@ -67,7 +63,6 @@ func (app *application) GetAllTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) GetTodoById(w http.ResponseWriter, r *http.Request) {
-	// userID := getUserIDFromContext(r.Context())
 	idParam := chi.URLParam(r, "todoID")
 	todoID, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
@@ -152,7 +147,7 @@ func buildUpdatesMap(payload UpdatedTodoPayload) map[string]interface{} {
 	return updates
 }
 
-func getUserIDFromContext(ctx context.Context) int64 {
-	// Implementation depends on your authentication system
-	return 1 // Placeholder
+func getUserIdFromContext(r *http.Request) int64 {
+	userID := r.Context().Value(userCtx).(*store.User).ID
+	return userID
 }
